@@ -34,7 +34,7 @@ interface BookContextType {
   userEmail: string | null;
   isLoggedIn: boolean;
   isAdmin: boolean;
-  login: (email: string) => Promise<boolean>;
+  login: (email: string, skipNotify?: boolean) => Promise<boolean>;
   logout: () => void;
 
   // Book Content state
@@ -176,7 +176,7 @@ export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [theme]);
 
   // Auth Operations
-  const login = async (email: string) => {
+  const login = async (email: string, skipNotify: boolean = false) => {
     setUserEmail(email);
     setIsLoggedIn(true);
     const isAuthor = email.toLowerCase() === "remijerphin@gmail.com" || email.toLowerCase() === "admin@book.com";
@@ -252,14 +252,16 @@ export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logSession(newSession);
 
     // Call secure backend route to trigger email notification to author
-    try {
-      await fetch("/api/notify-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSession),
-      });
-    } catch (e) {
-      console.error("Login notification failed:", e);
+    if (!skipNotify) {
+      try {
+        await fetch("/api/notify-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newSession),
+        });
+      } catch (e) {
+        console.error("Login notification failed:", e);
+      }
     }
 
     return true;

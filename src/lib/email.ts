@@ -130,3 +130,86 @@ Device:       ${payload.device}
   
   return true;
 }
+
+/**
+ * Sends a 6-digit OTP code to the reader.
+ * Operates in Console Logging mode if no mail credentials are set up.
+ */
+export async function sendOtpEmail(email: string, otp: string): Promise<boolean> {
+  const subject = `Your Verification Code for "Unnamed Feels"`;
+  
+  const textBody = `
+Your verification code is: ${otp}
+
+This code will expire in 5 minutes.
+`;
+
+  const htmlBody = `
+    <div style="font-family: 'Georgia', serif; max-width: 500px; margin: 0 auto; padding: 30px; border: 1px solid #e5e5e5; border-radius: 8px; background-color: #faf9f6; color: #1c1917;">
+      <h2 style="font-style: italic; color: #d4af37; border-bottom: 1px solid #e5e5e5; padding-bottom: 15px; margin-bottom: 20px;">
+        Unnamed Feels
+      </h2>
+      <p style="font-size: 15px; line-height: 1.6; color: #44403c;">
+        Please use the verification code below to enter the book:
+      </p>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; padding: 10px 20px; border: 1px solid #d4af37; border-radius: 4px; color: #1c1917; background-color: #ffffff; font-family: monospace;">
+          ${otp}
+        </span>
+      </div>
+
+      <p style="font-size: 12px; color: #78716c; text-align: center;">
+        This code is valid for 5 minutes. If you did not request this code, please ignore this email.
+      </p>
+
+      <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e5e5e5; font-size: 10px; color: #a8a29e; text-align: center; font-style: italic;">
+        Some feelings are never spoken. Some stories are never named.
+      </div>
+    </div>
+  `;
+
+  // SMTP Check
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASSWORD;
+
+  const isSmtpConfigured = !!(smtpHost && smtpUser && smtpPass);
+
+  if (isSmtpConfigured) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      });
+
+      await transporter.sendMail({
+        from: `"Unnamed Feels Verification" <${smtpUser}>`,
+        to: email,
+        subject: subject,
+        text: textBody,
+        html: htmlBody,
+      });
+
+      console.log(`OTP verification email sent to ${email}`);
+      return true;
+    } catch (error) {
+      console.error("Failed to send OTP via SMTP:", error);
+      // Fall through to console logging on error
+    }
+  }
+
+  // Fallback / Demo Mode: Log directly to server logs
+  console.log("\n=================== MOCK OTP EMAIL SENT ===================");
+  console.log(`TO:      ${email}`);
+  console.log(`CODE:    ${otp}`);
+  console.log("============================================================\n");
+  
+  return true;
+}
